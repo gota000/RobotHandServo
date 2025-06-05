@@ -50,7 +50,8 @@ class HandController:
    def apply_angles(self, angles: dict):
        for name, val in angles.items():
            if name in self.fingers:
-               self.fingers[name].set_curl_angle(180 - val)
+               self.fingers[name].angle_servo.set_angle(self.fingers[name].mid_angle + val)
+               # self.fingers[name].set_curl_angle(180 - val)
 
    def set_all_angles_to_mid(self):
        for finger in self.fingers.values():
