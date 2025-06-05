@@ -12,9 +12,9 @@ from SafeServo import SafeServo  # Custom class to restrict servo movement withi
 # Constants for mid-angles and allowed offset
 # -------------------------------
 POINTER_MID_ANGLE = 80
-MIDDLE_MID_ANGLE = 83
-RING_MID_ANGLE = 82
-PINKY_MID_ANGLE = 85
+MIDDLE_MID_ANGLE = 81
+RING_MID_ANGLE = 92
+PINKY_MID_ANGLE = 82
 ANGLE_OFFSET = 10  # Max allowed offset from mid-angle in both directions
 
 # -------------------------------
