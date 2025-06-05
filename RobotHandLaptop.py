@@ -1,14 +1,11 @@
 import os
 
-
 # Suppress TensorFlow logs
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-
 
 # Suppress absl logs (used by MediaPipe)
 os.environ["GLOG_minloglevel"] = "3"
 os.environ["ABSL_MIN_LOG_LEVEL"] = "3"
-
 
 import cv2
 import socket
@@ -18,33 +15,39 @@ import math
 import tkinter as tk
 from tkinter import messagebox
 import mediapipe as mp
-
+import math
 
 ALPHA_VALUE = 0.85
 
 class SpreadCalibrator:
     def __init__(self):
+        # Use MCP and TIP for angle-based spread detection
         self.fingers = {
-            "index": (8, 12),
-            "middle": (12, 16),
-            "ring": (16, 20),
-            "pinky": (20, 16)
+            "index": (5, 8),   # MCP, TIP
+            "middle": (9, 12),
+            "ring": (13, 16),
+            "pinky": (17, 20)
         }
         self.baseline_spread = {}
         self.min_spread = {}
         self.max_spread = {}
 
-    def calculate_distance(self, p1, p2):
-        return math.sqrt(sum((a - b) ** 2 for a, b in zip(p1, p2)))
+    def vector_angle(self, v1, v2):
+        dot = sum(a * b for a, b in zip(v1, v2))
+        mag1 = math.sqrt(sum(a * a for a in v1))
+        mag2 = math.sqrt(sum(a * a for a in v2))
+        if mag1 == 0 or mag2 == 0:
+            return 0
+        return math.acos(dot / (mag1 * mag2)) * 180 / math.pi
 
     def get_finger_spread(self, landmarks):
-        reference_len = self.calculate_distance(landmarks[0], landmarks[12])
-        if reference_len == 0:
-            return None
+        # Use angle between wrist->MCP and wrist->TIP for each finger
+        wrist = landmarks[0]
         spread = {}
-        for name, (tip, ref) in self.fingers.items():
-            dist = self.calculate_distance(landmarks[tip], landmarks[ref])
-            spread[name] = dist / reference_len
+        for name, (mcp, tip) in self.fingers.items():
+            v1 = [landmarks[mcp][i] - wrist[i] for i in range(3)]
+            v2 = [landmarks[tip][i] - wrist[i] for i in range(3)]
+            spread[name] = self.vector_angle(v1, v2)
         return spread
 
     def average_frame_spread(self, num_frames=15):
