@@ -21,12 +21,12 @@ ALPHA_VALUE = 0.85
 
 class SpreadCalibrator:
     def __init__(self):
-        # Use MCP and TIP for angle-based spread detection
+        # MCP, TIP, and MCP neighbor for baseline
         self.fingers = {
-            "index": (5, 8),   # MCP, TIP
-            "middle": (9, 12),
-            "ring": (13, 16),
-            "pinky": (17, 20)
+            "index": (5, 8, 9),    # index_mcp, index_tip, middle_mcp
+            "middle": (9, 12, 13), # middle_mcp, middle_tip, ring_mcp
+            "ring": (13, 16, 17),  # ring_mcp, ring_tip, pinky_mcp
+            "pinky": (17, 20, 13)  # pinky_mcp, pinky_tip, ring_mcp (use ring_mcp as neighbor for pinky)
         }
         self.baseline_spread = {}
         self.min_spread = {}
@@ -38,16 +38,42 @@ class SpreadCalibrator:
         mag2 = math.sqrt(sum(a * a for a in v2))
         if mag1 == 0 or mag2 == 0:
             return 0
-        return math.acos(dot / (mag1 * mag2)) * 180 / math.pi
+        # Clamp for safety
+        cos_angle = max(-1, min(1, dot / (mag1 * mag2)))
+        return math.acos(cos_angle) * 180 / math.pi
+
+    def get_palm_normal(self, landmarks):
+        # Use wrist (0), index_mcp (5), pinky_mcp (17) to define palm plane
+        p0 = landmarks[0]
+        p1 = landmarks[5]
+        p2 = landmarks[17]
+        v1 = [p1[i] - p0[i] for i in range(3)]
+        v2 = [p2[i] - p0[i] for i in range(3)]
+        # Cross product to get normal
+        normal = [
+            v1[1]*v2[2] - v1[2]*v2[1],
+            v1[2]*v2[0] - v1[0]*v2[2],
+            v1[0]*v2[1] - v1[1]*v2[0]
+        ]
+        return normal
 
     def get_finger_spread(self, landmarks):
-        # Use angle between wrist->MCP and wrist->TIP for each finger
-        wrist = landmarks[0]
         spread = {}
-        for name, (mcp, tip) in self.fingers.items():
-            v1 = [landmarks[mcp][i] - wrist[i] for i in range(3)]
-            v2 = [landmarks[tip][i] - wrist[i] for i in range(3)]
-            spread[name] = self.vector_angle(v1, v2)
+        palm_normal = self.get_palm_normal(landmarks)
+        for name, (mcp, tip, mcp_neighbor) in self.fingers.items():
+            # Baseline: MCP to neighbor MCP
+            baseline = [landmarks[mcp_neighbor][i] - landmarks[mcp][i] for i in range(3)]
+            # Finger: MCP to TIP
+            finger_vec = [landmarks[tip][i] - landmarks[mcp][i] for i in range(3)]
+            angle = self.vector_angle(baseline, finger_vec)
+            # Use sign: if finger is to the right of baseline, positive; left, negative
+            cross = [
+                baseline[1]*finger_vec[2] - baseline[2]*finger_vec[1],
+                baseline[2]*finger_vec[0] - baseline[0]*finger_vec[2],
+                baseline[0]*finger_vec[1] - baseline[1]*finger_vec[0]
+            ]
+            sign = 1 if sum(c*p for c, p in zip(cross, palm_normal)) > 0 else -1
+            spread[name] = angle * sign
         return spread
 
     def average_frame_spread(self, num_frames=15):
