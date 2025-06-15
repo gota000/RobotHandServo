@@ -17,6 +17,7 @@ FINGER_CHANNELS = {
    "middle": {"angle": 12, "curl": 13, "mid_angle": 81},
    "ring": {"angle": 11, "curl": 10, "mid_angle": 92},
    "pinky": {"angle": 9, "curl": 8, "mid_angle": 82},
+   "thumb": {"angle": 6, "curl": 7, "mid_angle": 90}
 }
 
 

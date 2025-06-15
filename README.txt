@@ -11,5 +11,6 @@ Servo 11 ( angle, ring finger) -> 92
 Servo 10 (curl, ring finger) 
 Servo 9 (angle, pinky finger) -> 82
 Servo 8 (curl, pinky finger) 
+Servo 6 (angle, thumb finger) ->
 
 IP -> 192.168.0.143
