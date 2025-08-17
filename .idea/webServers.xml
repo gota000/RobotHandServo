@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="df55693d-1d7c-4925-876b-1b720de12337" name="gotus@172.20.10.12">
+        <fileTransfer rootFolder="/home/gotus/" accessType="SFTP" host="172.20.10.12" port="22" sshConfigId="c66681b8-506d-4a8d-94e4-794eeda46805" sshConfig="gotus@172.20.10.12:22 password">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>

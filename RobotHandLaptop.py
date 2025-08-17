@@ -18,9 +18,10 @@ import mediapipe as mp
 import math
 
 ALPHA_VALUE = 0.85
+CURL_CALIBRATION_FILE = "curl_calibration.json"
 
 # class SpreadCalibrator:
-#     def __init__(self):
+#     def __init__(self):p[;p;;;p;lp-;[;p;p[
 #         # MCP, TIP, and MCP neighbor for baseline
 #         self.fingers = {
 #             "index": (5, 8, 9),    # index_mcp, index_tip, middle_mcp
@@ -214,11 +215,36 @@ class HandTracker:
        self.mp_hands = mp.solutions.hands
        self.mp_drawing = mp.solutions.drawing_utils
        self.fingers = {
+           "thumb": [1, 2, 3, 4],
            "index": [5, 6, 7, 8],
            "middle": [9, 10, 11, 12],
            "ring": [13, 14, 15, 16],
            "pinky": [17, 18, 19, 20]
        }
+       self.load_curl_calibration()
+
+   def load_curl_calibration(self):
+       if os.path.exists(CURL_CALIBRATION_FILE):
+           try:
+               with open(CURL_CALIBRATION_FILE, "r") as f:
+                   data = json.load(f)
+                   self.finger_mins = data.get("min", {})
+                   self.finger_maxs = data.get("max", {})
+               print(f"[INFO] Loaded curl calibration from {CURL_CALIBRATION_FILE}")
+           except Exception as e:
+               print(f"[ERROR] Failed to load curl calibration: {e}")
+
+   def save_curl_calibration(self):
+       data = {
+           "min": self.finger_mins,
+           "max": self.finger_maxs
+       }
+       try:
+           with open(CURL_CALIBRATION_FILE, "w") as f:
+               json.dump(data, f, indent=2)
+           print(f"[INFO] Saved curl calibration to {CURL_CALIBRATION_FILE}")
+       except Exception as e:
+           print(f"[ERROR] Failed to save curl calibration: {e}")
 
 
    def calculate_angle(self, a, b, c):
@@ -239,7 +265,6 @@ class HandTracker:
        # INVERTED: when raw is max, returns 0; when raw is min, returns 180
        return round(max(0, min(1, (max_a - raw) / (max_a - min_a))) * 180)
 
-
    def calibrate(self):
        def capture_position(position):
            root = tk.Tk()
@@ -250,19 +275,15 @@ class HandTracker:
            frame = cv2.flip(frame, 1)
            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-
            with self.mp_hands.Hands(max_num_hands=1) as hands:
                result = hands.process(rgb)
-
 
            cap.release()
            root.destroy()
 
-
            if not result.multi_hand_landmarks:
                print("No hand detected.")
                return None
-
 
            lm = [(lm.x, lm.y, lm.z) for lm in result.multi_hand_landmarks[0].landmark]
            snapshot = {}
@@ -271,12 +292,12 @@ class HandTracker:
                snapshot[name] = self.calculate_angle(a, b, c)
            return snapshot
 
-
        maxs = capture_position("Open")
        mins = capture_position("Closed")
        if maxs and mins:
            self.finger_maxs = maxs
            self.finger_mins = mins
+           self.save_curl_calibration()
            print("Calibration complete.")
        else:
            print("Calibration failed.")
@@ -318,8 +339,8 @@ class HandTracker:
 
 
 class RobotHandClient:
-#    def __init__(self, ip="192.168.0.143", port=9999):
-   def __init__(self, ip="172.20.10.12", port=9999):
+   def __init__(self, ip="192.168.0.143", port=9999):
+#    def __init__(self, ip="172.20.10.12", port=9999):
        self.addr = (ip, port)
        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
        self.sock.connect(self.addr)

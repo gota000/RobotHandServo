@@ -11,10 +11,11 @@ from SafeServo import SafeServo  # Custom class to restrict servo movement withi
 # -------------------------------
 # Constants for mid-angles and allowed offset
 # -------------------------------
-POINTER_MID_ANGLE = 80
-MIDDLE_MID_ANGLE = 81
-RING_MID_ANGLE = 92
-PINKY_MID_ANGLE = 82
+POINTER_MID_ANGLE = 78
+MIDDLE_MID_ANGLE = 77
+RING_MID_ANGLE = 81
+PINKY_MID_ANGLE = 55
+THUMB_MID_ANGLE = 90
 ANGLE_OFFSET = 10  # Max allowed offset from mid-angle in both directions
 
 # -------------------------------
@@ -43,6 +44,10 @@ pinky_angle_servo_unsafe = servo.Servo(pca.channels[9], min_pulse=500, max_pulse
 pinky_angle_servo = SafeServo(pinky_angle_servo_unsafe, PINKY_MID_ANGLE - ANGLE_OFFSET,
                               PINKY_MID_ANGLE + ANGLE_OFFSET)
 
+thumb_angle_servo_unsafe = servo.Servo(pca.channels[6], min_pulse=500, max_pulse=2600)
+thumb_angle_servo = SafeServo(thumb_angle_servo_unsafe, THUMB_MID_ANGLE - 40,
+                              THUMB_MID_ANGLE + 10)
+
 # -------------------------------
 # Curl servos – direct control, no safety limits
 # -------------------------------
@@ -50,6 +55,7 @@ pointer_curl_servo = servo.Servo(pca.channels[14], min_pulse=500, max_pulse=2600
 middle_curl_servo = servo.Servo(pca.channels[13], min_pulse=500, max_pulse=2600)
 ring_curl_servo = servo.Servo(pca.channels[10], min_pulse=500, max_pulse=2600)
 pinky_curl_servo = servo.Servo(pca.channels[8], min_pulse=500, max_pulse=2600)
+thumb_curl_servo = servo.Servo(pca.channels[7], min_pulse=500, max_pulse=2600)
 
 
 # -------------------------------
@@ -60,6 +66,7 @@ def init_angles():
     middle_angle_servo.set_angle(MIDDLE_MID_ANGLE)
     ring_angle_servo.set_angle(RING_MID_ANGLE)
     pinky_angle_servo.set_angle(PINKY_MID_ANGLE)
+    thumb_angle_servo.set_angle(THUMB_MID_ANGLE)
 
 
 # -------------------------------
@@ -70,6 +77,7 @@ def uncurl_fingers():
     middle_curl_servo.angle = 180
     ring_curl_servo.angle = 180
     pinky_curl_servo.angle = 180
+    thumb_curl_servo.angle = 180  
 
 
 # -------------------------------
@@ -80,6 +88,7 @@ def curl_fingers():
     middle_curl_servo.angle = 0
     ring_curl_servo.angle = 0
     pinky_curl_servo.angle = 45  # Slightly less curled than others
+    thumb_curl_servo.angle = 0  
 
 
 # -------------------------------
@@ -97,25 +106,34 @@ def create_gui():
     window.title("Hand Servo Control")
 
     # --- Add a centered angle control slider ---
-    def add_centered_angle_slider(label, servo_obj, mid_angle):
+    def add_centered_angle_slider(label, servo_obj, mid_angle, min_angle=None, max_angle=None):
         frame = tk.Frame(window)
         frame.pack(pady=5)
         tk.Label(frame, text=label).pack()
 
-        def update_servo(delta):
-            # Adjust servo angle relative to its mid-angle
-            target_angle = mid_angle + float(delta)
+        def update_servo(val):
+            # If min/max provided, use absolute angle; else, use offset from mid_angle
+            if min_angle is not None and max_angle is not None:
+                target_angle = float(val)
+            else:
+                target_angle = mid_angle + float(val)
             run_in_thread(lambda: servo_obj.set_angle(target_angle))
 
-        # Slider ranges from -ANGLE_OFFSET to +ANGLE_OFFSET
-        scale = tk.Scale(
-            frame, from_=-ANGLE_OFFSET, to=ANGLE_OFFSET,
-            orient='horizontal', length=300,
-            command=update_servo, resolution=1
-        )
-        scale.set(0)  # Start at center (mid-angle)
+        if min_angle is not None and max_angle is not None:
+            scale = tk.Scale(
+                frame, from_=min_angle, to=max_angle,
+                orient='horizontal', length=300,
+                command=update_servo, resolution=1
+            )
+            scale.set(mid_angle)
+        else:
+            scale = tk.Scale(
+                frame, from_=-ANGLE_OFFSET, to=ANGLE_OFFSET,
+                orient='horizontal', length=300,
+                command=update_servo, resolution=1
+            )
+            scale.set(0)
         scale.pack()
-
     # --- Add a curl slider that inverts values: 0 (uncurled) → 180, 100 (curled) → 0 ---
     def add_curl_slider(label, curl_servo):
         frame = tk.Frame(window)
@@ -140,12 +158,21 @@ def create_gui():
     add_centered_angle_slider("Middle Angle", middle_angle_servo, MIDDLE_MID_ANGLE)
     add_centered_angle_slider("Ring Angle", ring_angle_servo, RING_MID_ANGLE)
     add_centered_angle_slider("Pinky Angle", pinky_angle_servo, PINKY_MID_ANGLE)
+    # Thumb: use full SafeServo range
+    add_centered_angle_slider(
+        "Thumb Angle",
+        thumb_angle_servo,
+        THUMB_MID_ANGLE,
+        min_angle=THUMB_MID_ANGLE - 40,
+        max_angle=THUMB_MID_ANGLE + 10
+    )
 
     # --- Add all curl sliders for fingers ---
     add_curl_slider("Pointer Curl", pointer_curl_servo)
     add_curl_slider("Middle Curl", middle_curl_servo)
     add_curl_slider("Ring Curl", ring_curl_servo)
     add_curl_slider("Pinky Curl", pinky_curl_servo)
+    add_curl_slider("Thumb Curl", thumb_curl_servo)
 
     # --- Buttons to trigger predefined curl/uncurl gestures ---
     tk.Button(window, text="Curl All Fingers", font=("Arial", 14),

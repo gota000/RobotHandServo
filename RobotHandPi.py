@@ -13,15 +13,15 @@ ANGLE_OFFSET = 10
 
 
 FINGER_CHANNELS = {
-   "index": {"angle": 15, "curl": 14, "mid_angle": 80},
-   "middle": {"angle": 12, "curl": 13, "mid_angle": 81},
-   "ring": {"angle": 11, "curl": 10, "mid_angle": 92},
-   "pinky": {"angle": 9, "curl": 8, "mid_angle": 82},
+   "index": {"angle": 15, "curl": 14, "mid_angle": 78},
+   "middle": {"angle": 12, "curl": 13, "mid_angle": 77},
+   "ring": {"angle": 11, "curl": 10, "mid_angle": 81},
+   "pinky": {"angle": 9, "curl": 8, "mid_angle": 55},
    "thumb": {"angle": 6, "curl": 7, "mid_angle": 90}
 }
 
 
-
+#test
 
 class Finger:
    def __init__(self, pca, name, angle_ch, curl_ch, mid_angle):
@@ -49,16 +49,40 @@ class HandController:
        }
 
    def apply_angles(self, angles: dict):
+       # Get intended servo angles (default to 0 if not present)
+       thumb_angle = angles.get("thumb", 0)
+       pointer_angle = angles.get("index", 0)
+       middle_angle = angles.get("middle", 0)
+
+       # --- Collision logic ---
+       # If thumb > 90, pointer and middle cannot go above 90
+       if thumb_angle > 140:
+           if pointer_angle > 110:
+               pointer_angle = 110
+           if middle_angle > 100:
+               middle_angle = 100
+       # If pointer or middle > 90, thumb cannot go above 90
+       if pointer_angle > 110 or middle_angle > 100:
+       # if pointer_angle > 90:
+           if thumb_angle > 140:
+               thumb_angle = 140
+
+       # Update the angles dict with possibly limited values
+       angles = dict(angles)
+       angles["thumb"] = thumb_angle
+       angles["index"] = pointer_angle
+       angles["middle"] = middle_angle
+
        for name, val in angles.items():
            if name in self.fingers:
-               self.fingers[name].angle_servo.set_angle(self.fingers[name].mid_angle + val)
-               # self.fingers[name].set_curl_angle(180 - val)
+               self.fingers[name].set_curl_angle(180 - val)
+
 
    def set_all_angles_to_mid(self):
        for finger in self.fingers.values():
            finger.set_angle_to_mid()
 
-# ...existing code...
+
 
 def run_server(host='0.0.0.0', port=9999):
    controller = HandController()
