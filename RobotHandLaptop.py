@@ -339,8 +339,8 @@ class HandTracker:
 
 
 class RobotHandClient:
-   def __init__(self, ip="192.168.0.143", port=9999):
-#    def __init__(self, ip="172.20.10.12", port=9999):
+#    def __init__(self, ip="192.168.0.143", port=9999):
+   def __init__(self, ip="172.20.10.12", port=9999):
        self.addr = (ip, port)
        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
        self.sock.connect(self.addr)
